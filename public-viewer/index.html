@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snow Plow Tracker - Live Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #333;
+            margin: 0;
+        }
+
+        .live-indicator {
+            width: 12px;
+            height: 12px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .sidebar {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            width: 300px;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .sidebar-header h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .plow-count {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .plow-list {
+            padding: 10px;
+        }
+
+        .plow-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid;
+        }
+
+        .plow-item:hover {
+            background: #e9ecef;
+            transform: translateX(-5px);
+        }
+
+        .plow-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .plow-route {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .plow-status {
+            font-size: 12px;
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: #4CAF50;
+            color: white;
+        }
+
+        .plow-time {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .no-plows {
+            padding: 40px 20px;
+            text-align: center;
+            color: #999;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                top: 10px;
+                padding: 10px 20px;
+            }
+
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .sidebar {
+                width: calc(100vw - 40px);
+                right: 20px;
+                left: 20px;
+                max-height: 40vh;
+            }
+
+            .legend {
+                display: none;
+            }
+        }
+
+        /* Custom marker styles */
+        .plow-marker {
+            background: white;
+            border: 3px solid;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .plow-popup {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .plow-popup h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .plow-popup p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>❄️ Snow Plow Tracker</h1>
+        <div class="live-indicator"></div>
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Active Plows</h2>
+            <div class="plow-count" id="plowCount">0 plows active</div>
+        </div>
+        <div class="plow-list" id="plowList">
+            <div class="no-plows">No active plows at this time</div>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-title">Routes</div>
+        <div id="legendContent"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_URL = window.location.origin;
+        let map;
+        let markers = {};
+        let routes = [];
+        let ws;
+
+        // Initialize map
+        function initMap() {
+            // Default center (you can change this to your city's coordinates)
+            map = L.map('map').setView([40.7128, -74.0060], 12); // New York City default
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Try to get user's location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        map.setView([latitude, longitude], 13);
+                    },
+                    (error) => {
+                        console.log('Could not get user location, using default');
+                    }
+                );
+            }
+        }
+
+        // Load routes
+        async function loadRoutes() {
+            try {
+                const response = await fetch(`${API_URL}/api/routes`);
+                routes = await response.json();
+                updateLegend();
+            } catch (error) {
+                console.error('Error loading routes:', error);
+            }
+        }
+
+        // Update legend
+        function updateLegend() {
+            const legendContent = document.getElementById('legendContent');
+            legendContent.innerHTML = routes.map(route => `
+                <div class="legend-item">
+                    <div class="legend-color" style="background: ${route.color}"></div>
+                    <span>${route.name}</span>
+                </div>
+            `).join('');
+        }
+
+        // Load initial plow data
+        async function loadPlows() {
+            try {
+                const response = await fetch(`${API_URL}/api/plows`);
+                const plows = await response.json();
+
+                plows.forEach(plow => {
+                    updatePlowMarker(plow);
+                });
+
+                updateSidebar(plows);
+            } catch (error) {
+                console.error('Error loading plows:', error);
+            }
+        }
+
+        // Connect to WebSocket for real-time updates
+        function connectWebSocket() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'initial') {
+                    data.plows.forEach(plow => {
+                        if (plow.location) {
+                            updatePlowMarker(plow);
+                        }
+                    });
+                    updateSidebar(data.plows.filter(p => p.location));
+                } else if (data.type === 'location_update') {
+                    updatePlowMarker(data.driver);
+                    loadPlows(); // Refresh sidebar
+                } else if (data.type === 'status_update') {
+                    if (data.driver.status === 'inactive') {
+                        removeMarker(data.driver.id);
+                    }
+                    loadPlows(); // Refresh sidebar
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        // Update or create plow marker on map
+        function updatePlowMarker(plow) {
+            if (!plow.location) return;
+
+            const { latitude, longitude } = plow.location;
+            const color = plow.route.color;
+
+            // Create custom icon
+            const icon = L.divIcon({
+                html: `<div class="plow-marker" style="border-color: ${color}">🚜</div>`,
+                className: '',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+
+            // Update or create marker
+            if (markers[plow.id]) {
+                markers[plow.id].setLatLng([latitude, longitude]);
+            } else {
+                const marker = L.marker([latitude, longitude], { icon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div class="plow-popup">
+                            <h3>${plow.name}</h3>
+                            <p><strong>Route:</strong> ${plow.route.name}</p>
+                            <p><strong>Speed:</strong> ${plow.location.speed ? plow.location.speed.toFixed(1) : 0} mph</p>
+                            <p><strong>Status:</strong> ${plow.status}</p>
+                            <p><strong>Last Update:</strong> ${new Date(plow.lastUpdate).toLocaleTimeString()}</p>
+                        </div>
+                    `);
+
+                markers[plow.id] = marker;
+            }
+        }
+
+        // Remove marker
+        function removeMarker(driverId) {
+            if (markers[driverId]) {
+                map.removeLayer(markers[driverId]);
+                delete markers[driverId];
+            }
+        }
+
+        // Update sidebar
+        function updateSidebar(plows) {
+            const activePlows = plows.filter(p => p.status === 'active' && p.location);
+            const plowList = document.getElementById('plowList');
+            const plowCount = document.getElementById('plowCount');
+
+            plowCount.textContent = `${activePlows.length} plow${activePlows.length !== 1 ? 's' : ''} active`;
+
+            if (activePlows.length === 0) {
+                plowList.innerHTML = '<div class="no-plows">No active plows at this time</div>';
+                return;
+            }
+
+            plowList.innerHTML = activePlows.map(plow => {
+                const timeAgo = getTimeAgo(new Date(plow.lastUpdate));
+                return `
+                    <div class="plow-item" style="border-left-color: ${plow.route.color}" onclick="focusPlow('${plow.id}')">
+                        <div class="plow-name">${plow.name}</div>
+                        <div class="plow-route">${plow.route.name}</div>
+                        <div class="plow-status">${plow.status.toUpperCase()}</div>
+                        <div class="plow-time">Updated ${timeAgo}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Focus on specific plow
+        function focusPlow(driverId) {
+            const marker = markers[driverId];
+            if (marker) {
+                map.setView(marker.getLatLng(), 15);
+                marker.openPopup();
+            }
+        }
+
+        // Get time ago string
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+
+            if (seconds < 60) return 'just now';
+            if (seconds < 120) return '1 minute ago';
+            if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+            if (seconds < 7200) return '1 hour ago';
+            return `${Math.floor(seconds / 3600)} hours ago`;
+        }
+
+        // Initialize everything
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            loadRoutes();
+            loadPlows();
+            connectWebSocket();
+
+            // Refresh plow data every 30 seconds as backup
+            setInterval(loadPlows, 30000);
+        });
+    </script>
+</body>
+</html>

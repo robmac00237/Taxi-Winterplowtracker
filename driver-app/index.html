@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2196F3">
+    <title>Snow Plow Driver App</title>
+    <link rel="manifest" href="/driver-app/manifest.json">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .status-active {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status-paused {
+            background: #ff9800;
+            color: white;
+        }
+
+        .status-inactive {
+            background: #9e9e9e;
+            color: white;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .gps-status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .gps-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .gps-error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .route-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>❄️ Snow Plow Driver</h1>
+
+        <!-- Registration Screen -->
+        <div id="registrationScreen" class="card">
+            <h2>Get Started</h2>
+            <div class="form-group">
+                <label for="driverName">Your Name</label>
+                <input type="text" id="driverName" placeholder="Enter your name" required>
+            </div>
+            <div class="form-group">
+                <label for="routeSelect">Select Your Route</label>
+                <select id="routeSelect" required>
+                    <option value="">Loading routes...</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="registerDriver()">Start Tracking</button>
+        </div>
+
+        <!-- Tracking Screen -->
+        <div id="trackingScreen" class="hidden">
+            <div class="card">
+                <h2>Driver Info</h2>
+                <div class="status-badge" id="statusBadge">Inactive</div>
+                <div class="info-row">
+                    <span class="info-label">Driver:</span>
+                    <span class="info-value" id="driverNameDisplay"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Route:</span>
+                    <span class="info-value" id="routeDisplay"></span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>GPS Tracking</h2>
+                <div id="gpsStatus" class="gps-status"></div>
+                <div class="info-row">
+                    <span class="info-label">Latitude:</span>
+                    <span class="info-value" id="latitude">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Longitude:</span>
+                    <span class="info-value" id="longitude">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Speed:</span>
+                    <span class="info-value" id="speed">0 mph</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Last Update:</span>
+                    <span class="info-value" id="lastUpdate">--</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <button class="btn btn-success" id="startBtn" onclick="startTracking()">Start Plowing</button>
+                <button class="btn btn-warning hidden" id="pauseBtn" onclick="pauseTracking()">Pause</button>
+                <button class="btn btn-danger hidden" id="stopBtn" onclick="stopTracking()">Stop Shift</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let driverId = null;
+        let driverData = null;
+        let trackingActive = false;
+        let watchId = null;
+        const API_URL = window.location.origin;
+
+        // Load routes on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadRoutes();
+
+            // Check if driver was previously registered
+            const savedDriverId = localStorage.getItem('driverId');
+            if (savedDriverId) {
+                loadDriverData(savedDriverId);
+            }
+        });
+
+        async function loadRoutes() {
+            try {
+                const response = await fetch(`${API_URL}/api/routes`);
+                const routes = await response.json();
+
+                const select = document.getElementById('routeSelect');
+                select.innerHTML = '<option value="">Choose a route</option>';
+
+                routes.forEach(route => {
+                    const option = document.createElement('option');
+                    option.value = route.id;
+                    option.textContent = route.name;
+                    option.dataset.color = route.color;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading routes:', error);
+                alert('Failed to load routes. Please refresh the page.');
+            }
+        }
+
+        async function registerDriver() {
+            const name = document.getElementById('driverName').value.trim();
+            const routeId = document.getElementById('routeSelect').value;
+
+            if (!name || !routeId) {
+                alert('Please enter your name and select a route');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/driver/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ driverName: name, routeId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    driverId = data.driverId;
+                    driverData = data.driver;
+                    localStorage.setItem('driverId', driverId);
+                    showTrackingScreen();
+                } else {
+                    alert('Registration failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error registering:', error);
+                alert('Registration failed. Please check your connection.');
+            }
+        }
+
+        async function loadDriverData(id) {
+            try {
+                const response = await fetch(`${API_URL}/api/driver/${id}`);
+                if (response.ok) {
+                    driverData = await response.json();
+                    driverId = id;
+                    showTrackingScreen();
+                } else {
+                    localStorage.removeItem('driverId');
+                }
+            } catch (error) {
+                console.error('Error loading driver data:', error);
+                localStorage.removeItem('driverId');
+            }
+        }
+
+        function showTrackingScreen() {
+            document.getElementById('registrationScreen').classList.add('hidden');
+            document.getElementById('trackingScreen').classList.remove('hidden');
+
+            document.getElementById('driverNameDisplay').textContent = driverData.name;
+            document.getElementById('routeDisplay').innerHTML =
+                `<span class="route-color" style="background: ${driverData.route.color}"></span>${driverData.route.name}`;
+
+            updateStatusBadge('inactive');
+        }
+
+        function startTracking() {
+            if (!navigator.geolocation) {
+                alert('GPS not supported on this device');
+                return;
+            }
+
+            trackingActive = true;
+            document.getElementById('startBtn').classList.add('hidden');
+            document.getElementById('pauseBtn').classList.remove('hidden');
+            document.getElementById('stopBtn').classList.remove('hidden');
+
+            updateStatusBadge('active');
+            updateDriverStatus('active');
+
+            // Request high-accuracy GPS tracking
+            watchId = navigator.geolocation.watchPosition(
+                onLocationSuccess,
+                onLocationError,
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function pauseTracking() {
+            trackingActive = false;
+            document.getElementById('pauseBtn').classList.add('hidden');
+            document.getElementById('startBtn').classList.remove('hidden');
+
+            updateStatusBadge('paused');
+            updateDriverStatus('paused');
+
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+        }
+
+        function stopTracking() {
+            if (confirm('Are you sure you want to end your shift?')) {
+                trackingActive = false;
+
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+
+                updateDriverStatus('inactive');
+                localStorage.removeItem('driverId');
+                location.reload();
+            }
+        }
+
+        async function onLocationSuccess(position) {
+            const { latitude, longitude, speed, heading } = position.coords;
+
+            // Update display
+            document.getElementById('latitude').textContent = latitude.toFixed(6);
+            document.getElementById('longitude').textContent = longitude.toFixed(6);
+            document.getElementById('speed').textContent = speed ?
+                `${(speed * 2.237).toFixed(1)} mph` : '0 mph'; // Convert m/s to mph
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+            const statusDiv = document.getElementById('gpsStatus');
+            statusDiv.className = 'gps-status gps-active';
+            statusDiv.textContent = '✓ GPS Active - Location Tracking';
+
+            if (trackingActive && driverId) {
+                // Send location to server
+                try {
+                    await fetch(`${API_URL}/api/driver/${driverId}/location`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            latitude,
+                            longitude,
+                            speed: speed ? (speed * 2.237) : 0,
+                            heading: heading || 0
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error sending location:', error);
+                }
+            }
+        }
+
+        function onLocationError(error) {
+            const statusDiv = document.getElementById('gpsStatus');
+            statusDiv.className = 'gps-status gps-error';
+
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    statusDiv.textContent = '✗ GPS Permission Denied';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    statusDiv.textContent = '✗ GPS Position Unavailable';
+                    break;
+                case error.TIMEOUT:
+                    statusDiv.textContent = '✗ GPS Timeout';
+                    break;
+                default:
+                    statusDiv.textContent = '✗ GPS Error';
+            }
+        }
+
+        async function updateDriverStatus(status) {
+            if (!driverId) return;
+
+            try {
+                await fetch(`${API_URL}/api/driver/${driverId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+
+        function updateStatusBadge(status) {
+            const badge = document.getElementById('statusBadge');
+            badge.className = `status-badge status-${status}`;
+            badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
+
+        // Request persistent GPS permission on page load
+        if ('permissions' in navigator) {
+            navigator.permissions.query({ name: 'geolocation' }).then(result => {
+                console.log('GPS permission:', result.state);
+            });
+        }
+    </script>
+</body>
+</html>
